@@ -135,11 +135,30 @@ namespace SebastianBergmann\PHPUnit\SkeletonGenerator
             if ($file == '') {
                 $file = $this->outSourceFile;
             }
+            
+            $file = str_replace('.php', '', $file); // Netbeans doesn't "regenerate" tests if file already exists.
+            $file .= '.test.php';
+            
+            $saved = "\n";
 
-            if ($fp = fopen($file, 'wt')) {
-                fwrite($fp, $this->generate());
-                fclose($fp);
+            if (file_exists($file)) {
+                $contents = file_get_contents($file);
+                $start_placeholder = '/* custom tests (will be saved when test are regenerated) */';
+                $end_placeholder = '/* end custom tests */';
+                $start = strpos($contents, $start_placeholder);
+                $end = strrpos($contents, '/* end custom tests */');
+                if ($start !== false && $end !== false) {
+                    $saved = substr(
+                      $contents,
+                      $start + strlen($start_placeholder),
+                      $end - $start - strlen($start_placeholder)//- strlen($end_placeholder)
+                    );
+                }
             }
+            $generated = $this->generate();
+            $generated = str_replace('{saved}', $saved, $generated);
+
+            file_put_contents($file, $generated);
         }
 
         /**
